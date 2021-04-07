@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="icon_fa_solid_map_marker" translatable="false">&#xf041;</string>
+    <string name="icon_fa_solid_map_marker_alt" translatable="false">&#xf3c5;</string>
+    <string name="icon_fa_solid_map_pin" translatable="false">&#xf276;</string>
+    <string name="icon_fa_solid_hospital" translatable="false">&#xf47d;</string>
+    <string name="icon_fa_solid_restaurant" translatable="false">&#xf54f;</string>
+    <string name="icon_fa_solid_phone" translatable="false">&#xf095;</string>
+
+    <string name="icon_fa_regular_map" translatable="false">&#xf279;</string>
+</resources>

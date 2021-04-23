@@ -16,6 +16,7 @@ import com.winas_lesson.android.day5.Day5Sample.FontAwesomeSolidIcon
 import com.winas_lesson.android.day5.Day5Sample.R
 import com.winas_lesson.android.day5.Day5Sample.`interface`.ViewBindable
 import com.winas_lesson.android.day5.Day5Sample.components.map.CustomMarker
+import com.winas_lesson.android.day5.Day5Sample.data.model.Restaurant
 import com.winas_lesson.android.day5.Day5Sample.data.repository.Repository
 import com.winas_lesson.android.day5.Day5Sample.databinding.ActivityRestaurantDetailBinding
 import com.winas_lesson.android.day5.Day5Sample.helper.FontAwesomeSolidIconDrawable
@@ -24,10 +25,24 @@ import kotlin.properties.Delegates
 
 class RestaurantDetailActivity : AbstractActivity(), ViewBindable {
     companion object {
+        fun createIntent(
+            context: Context,
+            restaurant: Restaurant? = null,
+            restaurantId: Int = 0): Intent {
+            val intent = Intent(context, RestaurantDetailActivity::class.java)
+            restaurant?.let { it ->
+                intent.putExtra(EXTRA_RESTAURANT, it)
+            }
+            intent.putExtra(EXTRA_RESTAURANT_ID, restaurantId)
+            return intent
+        }
         private const val EXTRA_RESTAURANT = "EXTRA_RESTAURANT"
         private const val EXTRA_RESTAURANT_ID = "EXTRA_RESTAURANT_ID"
     }
     override lateinit var binding: ViewBinding
+    private var restaurant: Restaurant by Delegates.observable(Restaurant()) { _, _, _ ->
+        updateView()
+    }
     private val restaurantId: Int by lazy { intent.getIntExtra(EXTRA_RESTAURANT_ID, 0) }
 
     private val photoView: ImageView?
@@ -43,9 +58,9 @@ class RestaurantDetailActivity : AbstractActivity(), ViewBindable {
     private val mapView: MapView?
         get() = (binding as? ActivityRestaurantDetailBinding)?.mapView
     private lateinit var googleMap: GoogleMap
-//    private val marker: CustomMarker<Restaurant> by lazy {
-//        CustomMarker.create(applicationContext, googleMap, restaurant)
-//    }
+    private val marker: CustomMarker<Restaurant> by lazy {
+        CustomMarker.create(applicationContext, googleMap, restaurant)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -77,6 +92,17 @@ class RestaurantDetailActivity : AbstractActivity(), ViewBindable {
         mapView?.getMapAsync { map ->
             map.isIndoorEnabled = false
             googleMap = map
+
+            if (intent.hasExtra(EXTRA_RESTAURANT)) {
+                val data = intent.getParcelableExtra(EXTRA_RESTAURANT) as? Restaurant
+                if (data != null) {
+                    restaurant = data
+                } else {
+                    fetchRestaurant()
+                }
+            } else {
+                fetchRestaurant()
+            }
         }
     }
     override fun onResume() {
@@ -103,7 +129,36 @@ class RestaurantDetailActivity : AbstractActivity(), ViewBindable {
         super.onLowMemory()
         mapView?.onLowMemory()
     }
+    private fun fetchRestaurant() {
+        Repository.content.getRestaurant(
+            restaurantId = restaurantId,
+            completion = { restaurant ->
+                this.restaurant = restaurant
+            },
+            failure = {
+                // do nothing
+            }
+        )
+    }
     private fun updateView() {
-
+        Picasso.get()
+            .load(restaurant.photoUrl)
+            .into(photoView)
+        nameLabel?.text = restaurant.name
+        categoryLabel?.text = restaurant.category.text
+        addressLabel?.text = restaurant.address
+        marker.item?.let { item ->
+            // centering
+            googleMap.moveCamera(
+                CameraUpdateFactory.newCameraPosition(
+                    CameraPosition(
+                        item.location,
+                        14F,
+                        googleMap.cameraPosition.tilt, // tilt
+                        googleMap.cameraPosition.bearing // bearing
+                    )
+                )
+            )
+        }
     }
 }

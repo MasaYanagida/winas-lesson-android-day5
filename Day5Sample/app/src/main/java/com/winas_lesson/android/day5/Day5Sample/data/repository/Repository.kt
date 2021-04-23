@@ -2,10 +2,15 @@ package com.winas_lesson.android.day5.Day5Sample.data.repository
 
 import com.jakewharton.retrofit2.adapter.kotlin.coroutines.CoroutineCallAdapterFactory
 import com.squareup.moshi.Moshi
+import com.squareup.moshi.adapters.PolymorphicJsonAdapterFactory
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import com.winas_lesson.android.day5.Day5Sample.`interface`.FeedContentType
 import com.winas_lesson.android.day5.Day5Sample.data.api.SampleApiService
 import com.winas_lesson.android.day5.Day5Sample.data.interceptor.HeaderInterceptor
 import com.winas_lesson.android.day5.Day5Sample.data.interceptor.ResponseInterceptor
+import com.winas_lesson.android.day5.Day5Sample.data.model.FeedableItem
+import com.winas_lesson.android.day5.Day5Sample.data.model.Hospital
+import com.winas_lesson.android.day5.Day5Sample.data.model.Restaurant
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -19,6 +24,10 @@ class Repository {
             .addConverterFactory(
                 MoshiConverterFactory.create(
                     Moshi.Builder()
+                        .add(PolymorphicJsonAdapterFactory.of(FeedableItem::class.java, "content_type")
+                            .withSubtype(Restaurant::class.java, FeedContentType.Restraunt.index)
+                            .withSubtype(Hospital::class.java, FeedContentType.Hospital.index)
+                        )
                         .add(KotlinJsonAdapterFactory())
                         .build()
                 )

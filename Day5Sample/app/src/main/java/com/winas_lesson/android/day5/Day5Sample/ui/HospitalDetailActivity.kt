@@ -17,6 +17,7 @@ import com.winas_lesson.android.day5.Day5Sample.R
 import com.winas_lesson.android.day5.Day5Sample.`interface`.Locatable
 import com.winas_lesson.android.day5.Day5Sample.`interface`.ViewBindable
 import com.winas_lesson.android.day5.Day5Sample.components.map.CustomMarker
+import com.winas_lesson.android.day5.Day5Sample.data.model.Hospital
 import com.winas_lesson.android.day5.Day5Sample.data.repository.Repository
 import com.winas_lesson.android.day5.Day5Sample.databinding.ActivityHospitalDetailBinding
 import com.winas_lesson.android.day5.Day5Sample.helper.FontAwesomeSolidIconDrawable
@@ -25,10 +26,25 @@ import kotlin.properties.Delegates
 
 class HospitalDetailActivity : AbstractActivity(), ViewBindable {
     companion object {
+        fun createIntent(
+            context: Context,
+            hospital: Hospital? = null,
+            hospitalId: Int = 0): Intent {
+            val intent = Intent(context, HospitalDetailActivity::class.java)
+            hospital?.let { it ->
+                intent.putExtra(EXTRA_HOSPITAL, it)
+            }
+            intent.putExtra(EXTRA_HOSPITAL_ID, hospitalId)
+            return intent
+        }
+
         private const val EXTRA_HOSPITAL = "EXTRA_HOSPITAL"
         private const val EXTRA_HOSPITAL_ID = "EXTRA_HOSPITAL_ID"
     }
     override lateinit var binding: ViewBinding
+    private var hospital: Hospital by Delegates.observable(Hospital()) { _, _, _ ->
+        updateView()
+    }
     private val hospitalId: Int by lazy { intent.getIntExtra(EXTRA_HOSPITAL_ID, 0) }
 
     private val iconView: ImageView?
@@ -44,9 +60,9 @@ class HospitalDetailActivity : AbstractActivity(), ViewBindable {
     private val mapView: MapView?
         get() = (binding as? ActivityHospitalDetailBinding)?.mapView
     private lateinit var googleMap: GoogleMap
-//    private val marker: CustomMarker<Hospital> by lazy {
-//        CustomMarker.create(applicationContext, googleMap, hospital)
-//    }
+    private val marker: CustomMarker<Hospital> by lazy {
+        CustomMarker.create(applicationContext, googleMap, hospital)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -90,6 +106,16 @@ class HospitalDetailActivity : AbstractActivity(), ViewBindable {
             map.isIndoorEnabled = false
             googleMap = map
 
+            if (intent.hasExtra(EXTRA_HOSPITAL)) {
+                val data = intent.getParcelableExtra(EXTRA_HOSPITAL) as? Hospital
+                if (data != null) {
+                    hospital = data
+                } else {
+                    fetchHospital()
+                }
+            } else {
+                fetchHospital()
+            }
         }
     }
     override fun onResume() {
@@ -116,7 +142,35 @@ class HospitalDetailActivity : AbstractActivity(), ViewBindable {
         super.onLowMemory()
         mapView?.onLowMemory()
     }
-    private fun updateView() {
 
+    private fun fetchHospital() {
+        Repository.content.getHospital(
+            hospitalId = hospitalId,
+            completion = { hospital ->
+                this.hospital = hospital
+            },
+            failure = {
+                // do nothing
+            }
+        )
+    }
+    private fun updateView() {
+        nameLabel?.text = hospital.name
+        departmentLabel?.text = hospital.departments.map { it.text }.joinToString(", ")
+        addressLabel?.text = hospital.address
+        phoneLabel?.text = hospital.phone
+        marker.item?.let { item ->
+            // centering
+            googleMap.moveCamera(
+                CameraUpdateFactory.newCameraPosition(
+                    CameraPosition(
+                        item.location,
+                        14F,
+                        googleMap.cameraPosition.tilt, // tilt
+                        googleMap.cameraPosition.bearing // bearing
+                    )
+                )
+            )
+        }
     }
 }

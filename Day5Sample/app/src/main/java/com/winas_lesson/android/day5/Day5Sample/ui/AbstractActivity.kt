@@ -25,6 +25,7 @@ abstract class AbstractActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        EventBus.getDefault().register(this)
         //requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         isViewLoaded = true
     }
@@ -46,5 +47,19 @@ abstract class AbstractActivity : AppCompatActivity() {
             return true
         }
         return super.onKeyDown(keyCode, event)
+    }
+
+    @Subscribe(threadMode = ThreadMode.ASYNC)
+    fun handleGlobalEvent(event: GlobalEvent) {
+        if (!isTop) {
+            return
+        }
+        when (event.type) {
+            GlobalEventType.Success -> {
+                Handler(Looper.getMainLooper()).post {
+                    showToast("通信に成功しました(StatusCode: 200)")
+                }
+            }
+        }
     }
 }
